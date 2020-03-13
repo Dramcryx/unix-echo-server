@@ -15,7 +15,7 @@ public:
     {
         if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	    {
-            throw std::runtime_error("Ошибка открытия сокета");		    
+            throw std::runtime_error("Ошибка открытия TCP сокета");
 	    }
 
         int opt = 1;
@@ -47,6 +47,29 @@ public:
 
 private:
     int server_fd;
+};
+
+class UDPSocket
+{
+public:
+    UDPSocket(const sockaddr_in & servaddr)
+    {
+        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        {
+		    throw std::runtime_error("Ошибка открытия UDP сокета");
+	    }
+        if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) 
+	    {
+            throw std::runtime_error("Ошибка привязки к адресу");
+	    }
+    }
+
+    inline operator int() const
+    {
+        return sockfd;
+    }
+private:
+    int sockfd;
 };
 
 #endif

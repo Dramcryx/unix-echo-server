@@ -18,46 +18,20 @@
 
 #define PORT 8080
 int main(int argc, char const *argv[]) 
-{ 	
-
+{
 	sockaddr_in address; 
-
-    int opt = 1; 
-	int addrlen = sizeof(address);
-	// Creating socket file descriptor 
-	// if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
-	// { 
-	// 	perror("socket failed"); 
-	// 	exit(EXIT_FAILURE); 
-	// } 
-	
-	// Forcefully attaching socket to the port 8080 
-	// if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) 
-	// { 
-	//  	perror("setsockopt"); 
-	//  	exit(EXIT_FAILURE); 
-	// } 
 	address.sin_family = AF_INET; 
 	address.sin_addr.s_addr = INADDR_ANY; 
 	address.sin_port = htons( PORT ); 
-	
-	// Forcefully attaching socket to the port 8080 
-	// if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) 
-	// { 
-	// 	perror("bind failed"); 
-	// 	exit(EXIT_FAILURE); 
-	// }
-
-    // if (listen(server_fd, 100) < 0) 
-    // { 
-    //     perror("listen"); 
-    //     exit(EXIT_FAILURE); 
-    // }
 
     TCPSocket server_fd(address);
     
     std::map<int, std::thread> clients;
-    std::vector<client_handler> vec;
+    using cr_kv_t = const std::map<int, std::thread>::value_type &;
+
+    timeval timeout;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
 
     while (true)
     {
@@ -66,22 +40,23 @@ int main(int argc, char const *argv[])
         FD_SET(server_fd, &readset);
         for (auto &i: clients)
         {
-            FD_SET(i.first, &readset);
+            if (i.second.joinable())
+            {
+                FD_SET(i.first, &readset);
+            }
+        }
+        
+        int max = server_fd;
+        if (clients.size())
+        {
+            max = std::max(server_fd.socket_desc(), std::max_element(clients.begin(), clients.end(), [&](cr_kv_t l,
+                                                                                                         cr_kv_t & r){
+                            return l.first > r.first;
+                        })->first);
         }
 
-        timeval timeout;
-        timeout.tv_sec = 500;
-        timeout.tv_usec = 0;
-        
-        int max = std::max(server_fd.socket_desc(), std::max_element(clients.begin(), clients.end(), [&](const std::pair<const int, std::thread> & l,
-                                                                                           const std::pair<const int, std::thread> & r) -> bool{
-            return l.first > r.first;
-        })->first);
-
-        if(select(max+1, &readset, NULL, NULL, &timeout) <= 0)
+        if(select(max+1, &readset, NULL, NULL, NULL) <= 0)
         {
-
-            // TODO check stop word
             perror("select");
             exit(3);
         }
@@ -96,27 +71,11 @@ int main(int argc, char const *argv[])
                 perror("accept");
                 exit(3);
             }
-            std::cout << "new connection: " << sock << "\n";
-            //fcntl(sock, F_SETFL, O_NONBLOCK);
+            std::cout << "Новый TCP клиент: " << sock << "\n";
 
-            vec.emplace_back(sock);
-            
-            //clients[sock] = std::move(std::thread(infiniteloop, sock));
+            clients[sock] = std::thread(tcp_runner, sock);
         }
-        auto closed_client = std::find_if(clients.begin(), clients.end(), [](const std::pair<const int, std::thread> & l)
-        {
-            return !l.second.joinable();
-        });
-        if (closed_client != clients.end())
-        {
-            clients.erase(closed_client);
-            std::cout << "Clients remaining: " << clients.size() << "\n";
-        }
-    }
-    for (auto &i: clients)
-    {
-        close(i.first);
-        i.second.join();
+        //todo notify about close clients
     }
 	return 0; 
 } 
