@@ -35,6 +35,11 @@ public:
         }
     }
 
+    int toInt() const
+    {
+        return server_fd;
+    }
+
     int socket_desc() const
     {
         return server_fd;
@@ -62,6 +67,11 @@ public:
 	    {
             throw std::runtime_error("Ошибка привязки к адресу");
 	    }
+    }
+
+    int toInt() const
+    {
+        return sockfd;
     }
 
     inline operator int() const
