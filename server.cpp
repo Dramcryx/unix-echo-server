@@ -3,6 +3,7 @@
 #include <sys/socket.h> 
 #include <cstdlib> 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 
 #include <cstring>
@@ -94,7 +95,7 @@ int main(int argc, char const *argv[])
             if (!find_equal(udp_clients.begin(), udp_clients.end(), cliaddr))
             {
                 udp_clients.push_back(cliaddr);
-                std::cout << "Новый UDP клиент: " << cliaddr.sin_addr.s_addr << "\n";
+                std::cout << "Новый UDP клиент: " << inet_ntoa(cliaddr.sin_addr) << "\n";
             }
             std::thread(udp_runner, udp, cliaddr, buffer).detach();
         }

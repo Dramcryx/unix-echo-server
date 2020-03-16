@@ -37,7 +37,7 @@ void tcp_runner(int new_connection)
 
 void udp_runner(int sockfd, const sockaddr_in & cliaddr, const std::string & buffer)
 {
-    std::cout << "UDP клиент " << cliaddr.sin_addr.s_addr << ": " << buffer << "\n";
+    std::cout << "UDP клиент " << inet_ntoa(cliaddr.sin_addr) << ": " << buffer << "\n";
     int send_count = 0;
     while (!send_count)
     {

@@ -53,47 +53,49 @@ int main()
             break;
         }
 
-        resend:
-	    if ((send_count = sendto(sockfd, message.c_str(), message.size(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr))) < 0)
+        while (true)
         {
-            perror("Send failure");
-            exit(EXIT_FAILURE);
-        }
-        std::cout << "sendcount " << send_count << "\n";
-        if (!send_count)
-        {
-            std::cout << "Сегодня без посылочек обойдёмся\n";
-            break;
-        }
-
-        fd_set set;
-        FD_ZERO(&set);
-        FD_SET(sockfd, &set);
-
-        select(sockfd + 1, &set, 0, 0, &timeout);
-        
-        if (FD_ISSET(sockfd, &set))
-        {
-	        if ((n = recvfrom(sockfd, buffer, 1024, MSG_WAITALL, (sockaddr *) &servaddr, &len)) < 0)
+	        if ((send_count = sendto(sockfd, message.c_str(), message.size(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr))) < 0)
             {
-                perror("Receive failure");
+                perror("Send failure");
                 exit(EXIT_FAILURE);
             }
-	        buffer[n] = '\0';
-	        printf("От сервера : %s\n", buffer);
-        }
-        else
-        {
-            std::cout << "Нет ответа от сервера. Повторить отправку? y/n: ";
-            char c;
-            std::cin >> c;
-            if (c == 'y')
+            if (!send_count)
             {
-                goto resend;
+                std::cout << "Сегодня без посылочек обойдёмся\n";
+                break;
             }
-            else if (c == 'n')
+
+            fd_set set;
+            FD_ZERO(&set);
+            FD_SET(sockfd, &set);
+
+            select(sockfd + 1, &set, 0, 0, &timeout);
+        
+            if (FD_ISSET(sockfd, &set))
             {
-                continue;
+	            if ((n = recvfrom(sockfd, buffer, 1024, MSG_WAITALL, (sockaddr *) &servaddr, &len)) < 0)
+                {
+                    perror("Receive failure");
+                    exit(EXIT_FAILURE);
+                }
+	            buffer[n] = '\0';
+	            printf("От сервера : %s\n", buffer);
+                break;
+            }
+            else
+            {
+                std::cout << "Нет ответа от сервера. Повторить отправку? y/n: ";
+                char c;
+                std::cin >> c;
+                if (c == 'y')
+                {
+                    continue;
+                }
+                else if (c == 'n')
+                {
+                    break;
+                }
             }
         }
     }
